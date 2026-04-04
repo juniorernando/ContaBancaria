@@ -1,3 +1,4 @@
+from domain.entities.transaction import Transaction
 from domain.repositories.conta_repository import ContaRepository
 
 
@@ -11,3 +12,6 @@ class DepositarUseCase:
         conta = self.repo.buscar(titular)
         conta.saldo += valor
         self.repo.salvar(conta)
+        self.repo.registrar_transacao(
+            Transaction(titular, "deposito", valor, "Depósito via terminal")
+        )
