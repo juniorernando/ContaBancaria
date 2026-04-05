@@ -35,16 +35,16 @@ class InicioInterface:
         email = input("E-mail: ").strip().lower()
         senha = _input_senha("Senha: ").strip()
         confirmar_senha = _input_senha("Confirme a senha: ").strip()
-        saldo_raw = input("Saldo inicial (Enter para 0): ").strip()
+        deposito_raw = input("Deposito inicial (Enter para 0): ").strip()
 
         if senha != confirmar_senha:
             print("As senhas nao coincidem.")
             return self.escolher_fluxo_inicial()
 
         try:
-            saldo_inicial = float(saldo_raw) if saldo_raw else 0.0
+            saldo_inicial = float(deposito_raw) if deposito_raw else 0.0
         except ValueError:
-            print("Saldo inicial invalido. Usando 0.0.")
+            print("Deposito inicial invalido. Usando 0.0.")
             saldo_inicial = 0.0
 
         uc = CriarContaUsuarioUseCase(self.repo)

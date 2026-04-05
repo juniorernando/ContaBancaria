@@ -14,8 +14,8 @@ class SacarUseCase:
     def _limite_atual(self) -> tuple[float, str]:
         hora = datetime.datetime.now().hour
         if hora >= 22 or hora < 6:
-            return float(os.getenv("LIMITE_NOTURNO", 100.0)), "22h e 6h"
-        return float(os.getenv("LIMITE_DIURNO", 500.0)), "6h e 22h"
+            return float(os.getenv("LIMITE_NOTURNO", 500.0)), "22h e 6h"
+        return float(os.getenv("LIMITE_DIURNO", 5000.0)), "6h e 22h"
 
     def executar(self, titular: str, valor: float) -> None:
         if valor <= 0:

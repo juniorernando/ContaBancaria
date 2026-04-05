@@ -20,7 +20,7 @@ class MemoriaContaRepository(ContaRepository):
         saldo_inicial: float = 0.0,
     ) -> Conta:
         if saldo_inicial < 0:
-            raise ValueError("Saldo inicial não pode ser negativo.")
+            raise ValueError("Depósito inicial não pode ser negativo.")
         if email in self._usuarios_por_email:
             raise ValueError("E-mail já cadastrado.")
         if nome in self._contas:
