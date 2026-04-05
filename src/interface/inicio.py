@@ -52,7 +52,7 @@ class InicioInterface:
             conta = uc.executar(
                 nome=nome,
                 email=email,
-                senha_hash=senha,
+                senha=senha,
                 saldo_inicial=saldo_inicial,
             )
         except ValueError as exc:

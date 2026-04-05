@@ -1,5 +1,8 @@
+import bcrypt
 import msvcrt
 import sys
+
+from domain.repositories.conta_repository import ContaRepository
 
 
 def _input_senha(prompt: str = "Digite a senha: ") -> str:
@@ -25,26 +28,36 @@ def _input_senha(prompt: str = "Digite a senha: ") -> str:
 
 
 class Login:
+    def __init__(self, repo: ContaRepository):
+        self.repo = repo
+
     def sistemaLogin(self, usuario: str, senha: str) -> bool:
-        senha = str(senha).strip()
-
-        if len(senha) < 6:
-            print("A senha deve ter pelo menos 6 caracteres.")
-            return False
-        if senha == "123456":
-            print("A senha não pode ser '123456'.")
-            return False
-
+        usuario_digitado = str(usuario).strip()
+        senha_digitada = str(senha).strip()
         tentativas = 0
-        while tentativas < 3:
-            usuario_digitado = input("Digite o nome do usuario: ")
-            senha_digitada = _input_senha("Digite a senha: ")
 
-            if usuario_digitado == usuario and senha_digitada == senha:
-                print("Entrada autorizada")
-                return True
+        while tentativas < 3:
+            if not usuario_digitado:
+                usuario_digitado = input("Digite o nome do usuario: ").strip()
+            if not senha_digitada:
+                senha_digitada = _input_senha("Digite a senha: ").strip()
+
+            if len(senha_digitada) < 6:
+                print("A senha deve ter pelo menos 6 caracteres.")
+            elif senha_digitada == "123456":
+                print("A senha não pode ser '123456'.")
+            else:
+                senha_hash_db = self.repo.buscar_senha_hash_por_usuario(usuario_digitado)
+                if senha_hash_db and bcrypt.checkpw(
+                    senha_digitada.encode("utf-8"),
+                    senha_hash_db.encode("utf-8"),
+                ):
+                    print("Entrada autorizada")
+                    return True
 
             tentativas += 1
+            usuario_digitado = ""
+            senha_digitada = ""
             print(f"Usuario invalido. Tentativas restantes: {3 - tentativas}")
 
         print("Acesso bloqueado")

@@ -9,6 +9,7 @@ class MemoriaContaRepository(ContaRepository):
         self._contas: dict[str, Conta] = {}
         self._transacoes: list[Transaction] = []
         self._usuarios_por_email: dict[str, dict] = {}
+        self._senha_por_nome: dict[str, str] = {}
         self._seq_usuario = 1
         self._seq_conta = 1
 
@@ -36,6 +37,7 @@ class MemoriaContaRepository(ContaRepository):
             "nome": nome,
             "senha_hash": senha_hash,
         }
+        self._senha_por_nome[nome] = senha_hash
 
         conta = Conta(
             titular=nome,
@@ -46,6 +48,9 @@ class MemoriaContaRepository(ContaRepository):
         )
         self._contas[nome] = conta
         return conta
+
+    def buscar_senha_hash_por_usuario(self, nome: str) -> str | None:
+        return self._senha_por_nome.get(nome)
 
     def buscar(self, titular: str) -> Conta:
         if titular not in self._contas:

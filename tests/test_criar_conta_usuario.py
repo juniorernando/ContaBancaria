@@ -19,7 +19,7 @@ def test_cria_usuario_e_conta_no_sqlite():
         conta = use_case.executar(
             nome="Maria",
             email="maria@email.com",
-            senha_hash="hash_segura",
+            senha="senha_segura",
             saldo_inicial=150.0,
         )
 
@@ -43,7 +43,7 @@ def test_nao_permite_email_duplicado():
         use_case.executar(
             nome="Joao",
             email="joao@email.com",
-            senha_hash="hash1",
+            senha="hash1",
             saldo_inicial=10.0,
         )
 
@@ -51,6 +51,6 @@ def test_nao_permite_email_duplicado():
             use_case.executar(
                 nome="Joao Souza",
                 email="joao@email.com",
-                senha_hash="hash2",
+                senha="hash2",
                 saldo_inicial=20.0,
             )

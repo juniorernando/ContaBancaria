@@ -37,7 +37,7 @@ def _cadastrar_nova_conta_se_configurada(repo: SqliteContaRepository) -> None:
         conta = uc_criar.executar(
             nome=nome,
             email=email,
-            senha_hash=senha,
+            senha=senha,
             saldo_inicial=saldo_inicial,
         )
         print(
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     inicio = InicioInterface(repo)
     usuario, senha = inicio.escolher_fluxo_inicial()
 
-    login = Login()
+    login = Login(repo)
     if login.sistemaLogin(usuario, senha):
         menu = Menu(
             titular=usuario,

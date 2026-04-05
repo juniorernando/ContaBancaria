@@ -100,6 +100,14 @@ class SqliteContaRepository(ContaRepository):
             usuario_id=usuario_id,
         )
 
+    def buscar_senha_hash_por_usuario(self, nome: str) -> str | None:
+        with self._conn() as c:
+            row = c.execute(
+                "SELECT senha_hash FROM usuarios WHERE nome = ?",
+                (nome,),
+            ).fetchone()
+        return row[0] if row else None
+
     def buscar(self, titular: str) -> Conta:
         with self._conn() as c:
             row = c.execute(

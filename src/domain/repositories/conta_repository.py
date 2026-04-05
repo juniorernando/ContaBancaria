@@ -14,6 +14,9 @@ class ContaRepository(ABC):
     ) -> Conta: ...
 
     @abstractmethod
+    def buscar_senha_hash_por_usuario(self, nome: str) -> str | None: ...
+
+    @abstractmethod
     def buscar(self, titular: str) -> Conta: ...
 
     @abstractmethod
