@@ -1,8 +1,11 @@
+import logging
 import os
 import sys
 from dotenv import load_dotenv
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 load_dotenv()
+
+from core.logging_config import configure_logging
 
 from interface.login import Login
 from interface.menu import Menu
@@ -16,6 +19,10 @@ from use_cases.emprestimo import emprestimo
 from use_cases.listar_historico import ListarHistoricoUseCase
 
 
+configure_logging()
+logger = logging.getLogger(__name__)
+
+
 def _cadastrar_nova_conta_se_configurada(repo: SqliteContaRepository) -> None:
     nome = os.getenv("BANCO_NOVO_NOME", "").strip()
     email = os.getenv("BANCO_NOVO_EMAIL", "").strip().lower()
@@ -24,11 +31,13 @@ def _cadastrar_nova_conta_se_configurada(repo: SqliteContaRepository) -> None:
 
     # Só tenta cadastrar quando o bloco completo de credenciais for informado.
     if not (nome and email and senha):
+        logger.debug("Cadastro inicial ignorado: variáveis BANCO_NOVO_* incompletas.")
         return
 
     try:
         saldo_inicial = float(saldo_raw)
     except ValueError:
+        logger.warning("BANCO_NOVO_SALDO inválido: valor=%s. Usando 0.0.", saldo_raw)
         print("Aviso: BANCO_NOVO_SALDO inválido. Usando saldo inicial 0.0.")
         saldo_inicial = 0.0
 
@@ -40,33 +49,51 @@ def _cadastrar_nova_conta_se_configurada(repo: SqliteContaRepository) -> None:
             senha=senha,
             saldo_inicial=saldo_inicial,
         )
+        logger.info(
+            "Conta criada no bootstrap. titular=%s usuario_id=%s conta_id=%s",
+            conta.titular,
+            conta.usuario_id,
+            conta.id_conta,
+        )
         print(
             f"Conta criada para {conta.titular} (usuario_id={conta.usuario_id}, conta_id={conta.id_conta})."
         )
     except ValueError as exc:
+        logger.warning("Cadastro inicial não executado para email=%s: %s", email, exc)
         print(f"Cadastro inicial não executado: {exc}")
 
 
 if __name__ == "__main__":
-    repo = SqliteContaRepository("data/contas.db")
+    try:
+        logger.info("Inicializando aplicação ContaBancaria.")
+        repo = SqliteContaRepository("data/contas.db")
 
-    _cadastrar_nova_conta_se_configurada(repo)
+        _cadastrar_nova_conta_se_configurada(repo)
 
-    inicio = InicioInterface(repo)
-    usuario, senha = inicio.escolher_fluxo_inicial()
+        inicio = InicioInterface(repo)
+        usuario, senha = inicio.escolher_fluxo_inicial()
 
-    login = Login(repo)
-    if login.sistemaLogin(usuario, senha):
-        menu = Menu(
-            titular=usuario,
-            depositar_uc=DepositarUseCase(repo),
-            sacar_uc=SacarUseCase(repo),
-            ver_saldo_uc=VerSaldoUseCase(repo),
-            emprestimo_uc=emprestimo(repo),
-            historico_uc=ListarHistoricoUseCase(repo),
-        )
-        while True:
-            menu.exibir()
-            opcao = input("Escolha uma opção: ")
-            if menu.escolher_opcao(opcao):
-                break
+        login = Login(repo)
+        if login.sistemaLogin(usuario, senha):
+            logger.info("Login autorizado para usuario=%s", usuario)
+            menu = Menu(
+                titular=usuario,
+                depositar_uc=DepositarUseCase(repo),
+                sacar_uc=SacarUseCase(repo),
+                ver_saldo_uc=VerSaldoUseCase(repo),
+                emprestimo_uc=emprestimo(repo),
+                historico_uc=ListarHistoricoUseCase(repo),
+            )
+            while True:
+                menu.exibir()
+                opcao = input("Escolha uma opção: ")
+                if menu.escolher_opcao(opcao):
+                    break
+        else:
+            logger.warning("Tentativa de login rejeitada para usuario=%s", usuario)
+    except KeyboardInterrupt:
+        logger.info("Aplicação encerrada pelo usuário.")
+        print("\nAplicação encerrada pelo usuário.")
+    except Exception:
+        logger.exception("Falha não tratada na aplicação principal.")
+        raise

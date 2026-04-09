@@ -6,7 +6,7 @@ from domain.entities.conta import Conta
 from domain.entities.transaction import Transaction
 from domain.repositories.conta_repository import ContaRepository
 
-
+# Repositório SQLite para contas bancárias
 class SqliteContaRepository(ContaRepository):
     def __init__(self, db_path: str = "data/contas.db"):
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -107,6 +107,13 @@ class SqliteContaRepository(ContaRepository):
                 (nome,),
             ).fetchone()
         return row[0] if row else None
+
+    def atualizar_senha_hash_usuario(self, nome: str, senha_hash: str) -> None:
+        with self._conn() as c:
+            c.execute(
+                "UPDATE usuarios SET senha_hash = ? WHERE nome = ?",
+                (senha_hash, nome),
+            )
 
     def buscar(self, titular: str) -> Conta:
         with self._conn() as c:

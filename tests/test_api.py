@@ -39,8 +39,13 @@ def test_post_deposito_retorna_novo_saldo():
         assert response.status_code == 200
         assert response.json() == {
             "mensagem": "Depósito realizado com sucesso.",
-            "titular": "Maria",
-            "saldo": 150.0,
+            "conta": {
+                "id_conta": 1,
+                "usuario_id": 1,
+                "titular": "Maria",
+                "saldo": 150.0,
+                "saldo_emprestimo": 0.0,
+            },
         }
     finally:
         tmpdir.cleanup()
@@ -64,8 +69,13 @@ def test_post_saque_retorna_novo_saldo():
         assert response.status_code == 200
         assert response.json() == {
             "mensagem": "Saque realizado com sucesso.",
-            "titular": "Joao",
-            "saldo": 150.0,
+            "conta": {
+                "id_conta": 1,
+                "usuario_id": 1,
+                "titular": "Joao",
+                "saldo": 150.0,
+                "saldo_emprestimo": 0.0,
+            },
         }
     finally:
         tmpdir.cleanup()
@@ -85,8 +95,11 @@ def test_get_saldo_retorna_saldo_atual():
 
         assert response.status_code == 200
         assert response.json() == {
+            "id_conta": 1,
+            "usuario_id": 1,
             "titular": "Ana",
             "saldo": 300.0,
+            "saldo_emprestimo": 0.0,
         }
     finally:
         tmpdir.cleanup()

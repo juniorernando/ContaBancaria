@@ -3,8 +3,9 @@ from domain.entities.transaction import Transaction
 from domain.repositories.conta_repository import ContaRepository
 
 
+# Repositório em memória para contas bancárias
 class MemoriaContaRepository(ContaRepository):
-    # Repositório em memória para contas bancárias
+
     def __init__(self):
         self._contas: dict[str, Conta] = {}
         self._transacoes: list[Transaction] = []
@@ -13,6 +14,7 @@ class MemoriaContaRepository(ContaRepository):
         self._seq_usuario = 1
         self._seq_conta = 1
 
+    
     def criar_conta_usuario(
         self,
         nome: str,
@@ -51,6 +53,13 @@ class MemoriaContaRepository(ContaRepository):
 
     def buscar_senha_hash_por_usuario(self, nome: str) -> str | None:
         return self._senha_por_nome.get(nome)
+
+    def atualizar_senha_hash_usuario(self, nome: str, senha_hash: str) -> None:
+        self._senha_por_nome[nome] = senha_hash
+        for usuario in self._usuarios_por_email.values():
+            if usuario["nome"] == nome:
+                usuario["senha_hash"] = senha_hash
+                break
 
     def buscar(self, titular: str) -> Conta:
         if titular not in self._contas:

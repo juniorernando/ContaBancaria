@@ -30,6 +30,7 @@ class Menu:
         print()
 
     def exibir(self):
+        print()
         self.saldacao()
         print("=== Menu ===")
         print()
@@ -39,7 +40,7 @@ class Menu:
         print("4. Histórico de Transações")
         print("5. Empréstimo")
         print("6. Sair")
-
+        print()
 
     def escolher_opcao(self, opcao: str) -> bool:
         if opcao == '1':

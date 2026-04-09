@@ -23,11 +23,15 @@ O projeto segue uma arquitetura em camadas:
 - Use Cases: regras de negocio e orquestracao.
 - Adapters/Repositories: implementacao de persistencia.
 - Interface: interacao com usuario no terminal.
+- API: endpoints REST via FastAPI.
+- DTOs: modelos de entrada/saida da API.
+- Core: configuracao centralizada de logging.
 - Entry Point: composicao das dependencias e inicio do fluxo.
 
 Arquivos principais:
 
 - [lambda.py](lambda.py)
+- [api.py](api.py)
 - [src/domain/entities/conta.py](src/domain/entities/conta.py)
 - [src/domain/entities/transaction.py](src/domain/entities/transaction.py)
 - [src/domain/repositories/conta_repository.py](src/domain/repositories/conta_repository.py)
@@ -42,17 +46,23 @@ Arquivos principais:
 - [src/interface/inicio.py](src/interface/inicio.py)
 - [src/interface/login.py](src/interface/login.py)
 - [src/interface/menu.py](src/interface/menu.py)
+- [src/dtos/conta_dto.py](src/dtos/conta_dto.py)
+- [src/core/logging_config.py](src/core/logging_config.py)
 
 ## Estrutura do Projeto
 
 ```text
 ContaBancaria/
 |- lambda.py
+|- api.py
 |- data/
+|- logs/
 |- src/
 |  |- adapters/repositories/
+|  |- core/
 |  |- domain/entities/
 |  |- domain/repositories/
+|  |- dtos/
 |  |- interface/
 |  |- use_cases/
 |- tests/
@@ -91,6 +101,8 @@ Referencias:
 - Senha "123456" e bloqueada.
 - Maximo de 3 tentativas.
 - Entrada de senha mascarada no terminal.
+- Senha validada com bcrypt (`checkpw`) consultando o hash no banco.
+- Senhas legadas em texto puro sao aceitas e automaticamente migradas para bcrypt no primeiro login bem-sucedido.
 
 Referencia:
 
@@ -154,6 +166,13 @@ Referencia:
 - [lambda.py](lambda.py)
 - `_cadastrar_nova_conta_se_configurada`: tenta criar conta pelo conjunto de variaveis BANCO_NOVO_*.
 - Bloco principal: inicializa repositorio, interface inicial, login e menu.
+- Configura logging centralizado na inicializacao.
+
+- [api.py](api.py)
+- `create_app(repo)`: factory que cria a aplicacao FastAPI com o repositorio injetado.
+- `POST /deposito`: realiza deposito e retorna dados atualizados da conta.
+- `POST /saque`: realiza saque e retorna dados atualizados da conta.
+- `GET /saldo`: retorna saldo atual da conta pelo parametro `titular`.
 
 ### Interface
 
@@ -165,6 +184,7 @@ Referencia:
 - [src/interface/login.py](src/interface/login.py)
 - `_input_senha`: leitura de senha com mascaramento.
 - `sistemaLogin`: valida senha e controla tentativas.
+- `_validar_senha`: verifica senha com bcrypt e faz migracao automatica de senhas legadas.
 
 - [src/interface/menu.py](src/interface/menu.py)
 - `exibir`: exibe menu principal.
@@ -174,7 +194,7 @@ Referencia:
 ### Use Cases
 
 - [src/use_cases/criar_conta_usuario.py](src/use_cases/criar_conta_usuario.py)
-- `executar`: valida entradas e delega persistencia ao repositorio.
+- `executar`: valida entradas, gera hash bcrypt da senha e delega persistencia ao repositorio.
 
 - [src/use_cases/depositar.py](src/use_cases/depositar.py)
 - `executar`: valida valor, atualiza saldo e registra transacao.
@@ -199,7 +219,9 @@ Referencia:
 ### Repositorios
 
 - [src/domain/repositories/conta_repository.py](src/domain/repositories/conta_repository.py)
-- Contrato para criacao de conta, busca, salvamento e historico.
+- Contrato para criacao de conta, busca, salvamento, historico e gerenciamento de senhas.
+- `buscar_senha_hash_por_usuario`: retorna hash da senha pelo nome do usuario.
+- `atualizar_senha_hash_usuario`: atualiza o hash da senha (usado na migracao legada).
 
 - [src/adapters/repositories/sqlite_conta_repository.py](src/adapters/repositories/sqlite_conta_repository.py)
 - `_init_db`: cria tabelas `usuarios`, `contas`, `transacoes`.
@@ -209,9 +231,26 @@ Referencia:
 - `salvar`: atualiza saldo e saldo de emprestimo.
 - `registrar_transacao`: persiste movimentacoes.
 - `listar_transacoes`: retorna historico ordenado.
+- `buscar_senha_hash_por_usuario`: consulta hash bcrypt pelo nome.
+- `atualizar_senha_hash_usuario`: atualiza hash ao migrar senha legada.
 
 - [src/adapters/repositories/memoria_conta_repository.py](src/adapters/repositories/memoria_conta_repository.py)
 - Implementacao em memoria para cenarios de teste e desenvolvimento.
+- Armazena hashes de senha em dicionario interno `_senha_por_nome`.
+
+### DTOs
+
+- [src/dtos/conta_dto.py](src/dtos/conta_dto.py)
+- `ContaDTO`: representacao da conta para respostas da API (id_conta, usuario_id, titular, saldo, saldo_emprestimo). Construido via `from_entity(conta)`.
+- `MovimentoRequestDTO`: corpo da requisicao de deposito/saque (titular, valor).
+- `MovimentoResponseDTO`: resposta de deposito/saque (mensagem, conta: ContaDTO).
+
+### Logging
+
+- [src/core/logging_config.py](src/core/logging_config.py)
+- `configure_logging()`: configura handler de console e arquivo (`logs/contabancaria.log`) no logger raiz. Idempotente — pode ser chamada multiplas vezes sem duplicar handlers.
+- Nivel configuravel pela variavel de ambiente `LOG_LEVEL` (padrao: `INFO`).
+- Formato: `data | nivel | modulo | mensagem`.
 
 ## Modelo de Dados SQLite
 
@@ -257,17 +296,33 @@ BANCO_NOVO_NOME=
 BANCO_NOVO_EMAIL=
 BANCO_NOVA_SENHA=
 BANCO_NOVO_SALDO=0
+
+# Opcional: nivel de log (DEBUG, INFO, WARNING, ERROR)
+LOG_LEVEL=INFO
 ```
 
 ## Como Executar
 
 1. Ative o ambiente virtual.
-2. Instale as dependencias.
-3. Execute o sistema:
+2. Instale as dependencias:
+
+```powershell
+pip install bcrypt fastapi uvicorn httpx python-dotenv
+```
+
+3. Execute o sistema no terminal:
 
 ```powershell
 python lambda.py
 ```
+
+4. Ou execute como API REST:
+
+```powershell
+uvicorn api:app --reload
+```
+
+Documentacao interativa disponivel em `http://127.0.0.1:8000/docs`.
 
 ## Testes
 
@@ -282,10 +337,14 @@ Arquivos de teste atuais:
 - [tests/test_emprestimo.py](tests/test_emprestimo.py)
 - [tests/test_criar_conta_usuario.py](tests/test_criar_conta_usuario.py)
 - [tests/test_bootstrap_cadastro.py](tests/test_bootstrap_cadastro.py)
+- [tests/test_api.py](tests/test_api.py)
+- [tests/test_login.py](tests/test_login.py)
 
 ## Melhorias Futuras
 
-- Autenticacao real consultando usuario/senha no banco.
-- Armazenar senha com hash forte (exemplo: bcrypt).
-- Aumentar cobertura de testes para saque, deposito e login.
+- Adicionar endpoint `POST /cadastro` na API REST.
+- Autenticacao com JWT para proteger endpoints da API.
+- Rotacao de logs por tamanho ou data (`RotatingFileHandler`).
+- Rastreamento de requisicoes com request ID na API.
 - Padronizar nomenclatura de classe `emprestimo` para `EmprestimoUseCase`.
+- Aumentar cobertura de testes para saque e deposito via terminal.
