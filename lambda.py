@@ -73,6 +73,7 @@ if __name__ == "__main__":
         inicio = InicioInterface(repo)
         usuario, senha = inicio.escolher_fluxo_inicial()
 
+
         login = Login(repo)
         if login.sistemaLogin(usuario, senha):
             logger.info("Login autorizado para usuario=%s", usuario)
